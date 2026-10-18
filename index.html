@@ -138,7 +138,14 @@
   /* TOP ROW: EnCLOD logo levo od besedila */
   .top-row{display:grid;grid-template-columns:minmax(280px,1.1fr) minmax(360px,1.4fr);align-items:stretch;gap:clamp(20px,4vw,70px)}
   .top-col{flex:1 1 auto;min-width:0;display:flex;flex-direction:column;gap:clamp(10px,1.8vw,18px)}
-  .side{display:flex;flex-direction:column;gap:clamp(10px,1.4vw,16px);justify-self:start;width:clamp(240px,28vw,420px)}
+  /* mreza zgornjega dela: zemljevid poravnan z "obdobje podatkov" */
+  .top-row{grid-template-areas:"loc brand" "period map" "actions map";grid-template-rows:auto auto 1fr;column-gap:clamp(20px,4vw,70px);row-gap:clamp(10px,1.8vw,18px);align-items:start}
+  .top-row .top-col,.top-row .side{display:contents}
+  .top-row .loc{grid-area:loc}
+  .top-row .period{grid-area:period;justify-self:start}
+  .top-row .actions{grid-area:actions;align-self:start}
+  .top-row .brandmark{grid-area:brand;justify-self:start;align-self:start}
+  .top-row .mapbox{grid-area:map;justify-self:start;align-self:start;width:clamp(240px,28vw,420px)}
   .brandmark{display:flex;align-items:center;justify-content:flex-start;background:#fff;border-radius:8px;padding:clamp(6px,.8vw,10px) clamp(10px,1.2vw,16px);width:clamp(170px,17vw,250px);box-shadow:0 8px 22px rgba(0,0,0,.22)}
   .mapbox{position:relative;width:100%;aspect-ratio:400/260;border-radius:8px;overflow:hidden;background:#155c9c;border:1px solid rgba(255,255,255,.35)}
   .mapbox[hidden]{display:none}
@@ -155,8 +162,8 @@
   @media (min-width:881px){.authors-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
   .brandmark img{display:block;width:100%;height:auto;max-height:100%;object-fit:contain}
   @media (max-width:880px){
-    .top-row{grid-template-columns:1fr;gap:16px}
-    .side{width:100%}
+    .top-row{grid-template-columns:1fr;grid-template-areas:"loc" "period" "actions" "brand" "map";grid-template-rows:none;gap:16px}
+    .top-row .mapbox{width:100%}
     .brandmark{width:auto;max-width:min(60vw,240px)}
   }
 </style>
