@@ -150,7 +150,7 @@
   .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .next-btn{font-family:inherit}
   .next-btn[disabled]{opacity:.5;cursor:wait}
-  .authors-line{font-size:clamp(10px,.95vw,12px);color:var(--ink-muted);margin-top:6px;letter-spacing:.01em}
+  .authors-line{flex:0 0 auto;font-size:clamp(10px,.95vw,12px);color:var(--ink-muted);letter-spacing:.01em;padding:0 clamp(20px,4vw,56px) 8px;margin-top:-8px}
   .authors-line b{font-weight:600;color:var(--ink)}
   @media (min-width:881px){.authors-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
   .brandmark img{display:block;width:100%;height:auto;max-height:100%;object-fit:contain}
@@ -241,8 +241,9 @@
 
   <div class="night-note" id="night-note"></div>
   <div class="meta-note" id="meta-note"></div>
-  <div class="authors-line" id="authors"></div>
 </main>
+
+<div class="authors-line" id="authors"></div>
 
 <footer>
   <div class="logos">
