@@ -101,7 +101,7 @@
   .period .plabel{color:var(--ink-faint);font-weight:600}
   .period .pval{color:var(--ink);font-weight:700}
   .night-note{font-size:clamp(10px,.95vw,12px);color:var(--ink-faint);margin-top:2px}
-  .meta-note{font-size:clamp(10px,.95vw,12px);color:var(--ink-faint);margin-top:1px}
+  .meta-note{font-size:clamp(10px,.95vw,12px);color:var(--ink-faint);margin-top:calc(4px - clamp(14px,2.2vw,26px))}
   .windowtabs{display:flex;gap:clamp(10px,1.6vw,24px);align-items:center;margin-top:clamp(6px,1.4vw,16px)}
   .wtab{background:none;border:0;padding:3px 0;cursor:pointer;color:var(--ink-faint);font:600 clamp(12px,1.2vw,16px)/1 "Barlow",sans-serif;letter-spacing:.05em;text-transform:uppercase;border-bottom:2px solid transparent}
   .wtab:hover{color:var(--ink)}
@@ -158,7 +158,7 @@
   .actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .next-btn{font-family:inherit}
   .next-btn[disabled]{opacity:.5;cursor:wait}
-  .authors-line{flex:0 0 auto;font-size:clamp(10px,.95vw,12px);color:var(--ink-muted);letter-spacing:.01em;padding:0 clamp(20px,4vw,56px) 8px;margin-top:-8px}
+  .authors-line{flex:0 0 auto;font-size:clamp(10px,.95vw,12px);color:var(--ink-muted);letter-spacing:.01em;padding:0 clamp(20px,4vw,56px) 8px;margin-top:calc(4px - clamp(18px,3vw,40px))}
   .authors-line b{font-weight:600;color:var(--ink)}
   @media (min-width:881px){.authors-line{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}}
   .brandmark img{display:block;width:100%;height:auto;max-height:100%;object-fit:contain}
