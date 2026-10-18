@@ -115,6 +115,8 @@
   .logos .stack .top{font-weight:700;color:var(--ink)}
   .logos .stack .sub{font-size:9px;font-weight:500;color:var(--ink-faint);letter-spacing:.06em}
   .euflag{width:26px;height:18px;flex:0 0 auto}
+  .authors{font-size:clamp(10px,.9vw,12px);line-height:1.35;color:var(--slate);flex:1 1 280px;text-align:center}
+  .authors b{font-weight:600;color:#3a464f}
   .clock{font-size:clamp(13px,1.2vw,17px);letter-spacing:.04em;color:rgba(58,70,79,.78);white-space:nowrap;margin-left:auto}
 
   .demo-flag{position:fixed;top:calc(var(--bar-h) + 8px);right:10px;z-index:5;background:rgba(0,0,0,.28);border:1px solid rgba(255,255,255,.25);border-radius:4px;padding:3px 9px;font-size:11px;letter-spacing:.04em;color:var(--ink-muted)}
@@ -233,6 +235,7 @@
     <a class="logo-word" href="https://telraam.net/" target="_blank" rel="noopener">Telraam</a>
     <a class="logo-word" href="https://datacake.co/" target="_blank" rel="noopener">DATACAKE</a>
   </div>
+  <div class="authors" id="authors"></div>
   <div class="clock" id="clock">—</div>
 </footer>
 
@@ -372,6 +375,7 @@ const I18N = {
     eu_top:"Sofinancira", eu_bottom:"Evropska unija",
     demo:"demo podatki",
     test_badge:"testna različica",
+    authors:"<b>Avtorji:</b> doc. dr. Tomaž Berčič (vodja projekta), asist. dr. Andrej Mahovič, mag. inž. arh. Marko Stavrev · Univerza v Ljubljani, Fakulteta za arhitekturo",
     lang_other:"EN"
   },
   en:{
@@ -390,6 +394,7 @@ const I18N = {
     eu_top:"Co-funded by", eu_bottom:"the European Union",
     demo:"demo data",
     test_badge:"test version",
+    authors:"<b>Authors:</b> Assist. Prof. Tomaž Berčič, PhD (project lead), Andrej Mahovič, PhD, Marko Stavrev, MArch · University of Ljubljana, Faculty of Architecture",
     lang_other:"SI"
   }
 };
@@ -555,6 +560,7 @@ function applyLang(){
   document.getElementById("night-note").textContent=t("night_note");
   document.getElementById("meta-note").textContent=t("source_note")+" · "+t("rotate_note");
   document.getElementById("dl-link").textContent=t("dl_link");
+  document.getElementById("authors").innerHTML=t("authors");
   document.getElementById("period-label").textContent=t("period_label");
   document.getElementById("period-val").textContent=state.period?fmtPeriod(state.period.start,state.period.end):"—";
   document.getElementById("demo-flag").textContent=t("demo");
