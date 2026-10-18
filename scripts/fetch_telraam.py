@@ -111,6 +111,7 @@ def write_csv(path, rows):
 MAP_VERSION = 1
 MAP_W, MAP_H = 400, 260          # viewBox v px
 MAP_HALF_W_M = 380               # pol sirine izreza v metrih
+MAX_NEW_MAPS = 4                 # najvec novih zemljevidov na zagon (da objava ostane hitra)
 UA = "EnCLOD-NovaGorica-dashboard/1.0 (University of Ljubljana, Faculty of Architecture)"
 HW_CLASS = {
     "motorway": "major", "trunk": "major", "primary": "major",
@@ -227,6 +228,7 @@ def build_map(sid, addr):
 
 def ensure_maps(ids):
     addrs = sensor_addresses()
+    built = 0
     for sid in ids:
         path_out = os.path.join(OUT, f"map_{sid}.json")
         prev = None
@@ -237,7 +239,10 @@ def ensure_maps(ids):
                 prev = None
         if prev and prev.get("v") == MAP_VERSION:
             m = prev
+        elif built >= MAX_NEW_MAPS:
+            m = None
         else:
+            built += 1
             m = build_map(sid, addrs.get(sid, "Nova Gorica"))
             print(f"  [{sid}] zemljevid {'pripravljen' if m else 'NI pripravljen'}")
         if m:
