@@ -1,0 +1,49 @@
+name: Posodobi podatke in objavi stran
+
+on:
+  schedule:
+    - cron: "7 * * * *"     # vsako uro (UTC), 7 minut cez polno uro
+  workflow_dispatch:         # rocni zagon (Actions > Run workflow)
+  push:
+    branches: [main]
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - id: pages
+        uses: actions/configure-pages@v5
+      - name: Pripravi mapo strani
+        run: |
+          mkdir -p _site
+          cp index.html _site/
+          touch _site/.nojekyll
+      - name: Prenesi podatke Telraam
+        env:
+          TELRAAM_API_KEY: ${{ secrets.TELRAAM_API_KEY }}
+          PAGES_URL: ${{ steps.pages.outputs.base_url }}
+        run: python3 scripts/fetch_telraam.py
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: _site
+
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - id: deployment
+        uses: actions/deploy-pages@v4
