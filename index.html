@@ -80,7 +80,7 @@
   .featured{display:flex;align-items:flex-end;gap:clamp(10px,2vw,28px)}
   .featured .col{display:flex;flex-direction:column;align-items:flex-start}
   .featured .ficon{width:34px;height:34px;margin-bottom:4px}
-  .featured .big{font-family:"Barlow Semi Condensed";font-weight:600;font-size:clamp(72px,12vw,190px);line-height:.82;letter-spacing:-.01em}
+  .featured .big{font-family:"Barlow Semi Condensed";font-weight:600;font-size:calc(clamp(72px,12vw,190px)*var(--k,1));line-height:.82;letter-spacing:-.01em}
   .featured .flabel{font-size:clamp(15px,1.6vw,24px);text-transform:uppercase;letter-spacing:.04em;margin-top:10px}
   .featured .fpct{font-size:clamp(15px,1.6vw,24px);font-weight:500;margin-top:2px}
   .ring{position:relative;width:clamp(110px,12vw,170px);height:clamp(110px,12vw,170px);flex:0 0 auto}
@@ -90,7 +90,7 @@
   .secondary{display:grid;grid-template-columns:repeat(3,auto);justify-content:space-between;gap:clamp(16px,3vw,48px) clamp(20px,3vw,48px);justify-items:start}
   .metric{display:flex;flex-direction:column;align-items:flex-start;min-width:120px}
   .metric .micon{width:30px;height:30px;margin-bottom:2px}
-  .metric .mval{font-family:"Barlow Semi Condensed";font-weight:600;font-size:clamp(34px,4.4vw,62px);line-height:.9}
+  .metric .mval{font-family:"Barlow Semi Condensed";font-weight:600;font-size:calc(clamp(34px,4.4vw,62px)*var(--k,1));line-height:.9}
   .metric .mlabel{font-size:clamp(11px,1vw,14px);text-transform:uppercase;letter-spacing:.05em;margin-top:6px}
   .metric .mpct{font-size:clamp(11px,1vw,14px);color:var(--ink-muted);margin-top:1px}
 
@@ -140,7 +140,7 @@
     .data{grid-template-columns:1fr;gap:26px}
     #wires{display:none}
     .featured{flex-direction:column;align-items:flex-start;gap:16px}
-    .featured .big{font-size:clamp(60px,19vw,96px)}
+    .featured .big{font-size:calc(clamp(60px,19vw,96px)*var(--k,1))}
     .secondary{grid-template-columns:1fr 1fr;justify-content:start;gap:20px 28px}
     .clock{margin-left:0}
   }
@@ -412,6 +412,7 @@ const I18N = {
     cmp_month:"Primerjava: povprečje do 6 predhodnih 30-dnevnih obdobij.",
     cmp_custom:"Za izbrano obdobje primerjava ni prikazana.",
     cmp_none:"Za primerjavo s povprečjem še ni dovolj starejših podatkov.",
+    no_data:"Za izbrano obdobje ta senzor nima podatkov.",
     brand:"Nova Gorica – nadzorna plošča odprtih podatkov",
     nav_about:"O nas", nav_projects:"Več o projektu", nav_contacts:"Kontakt",
     intro_h:"Krepitev upravljavskih zmogljivosti lokalnih skupnosti z odprtimi podatki",
@@ -439,6 +440,7 @@ const I18N = {
     cmp_month:"Compared with the average of up to 6 preceding 30-day periods.",
     cmp_custom:"No comparison is shown for a custom period.",
     cmp_none:"Not enough earlier data yet for a comparison with the average.",
+    no_data:"This sensor has no data for the selected period.",
     brand:"Nova Gorica Open Data Dashboard",
     nav_about:"About us", nav_projects:"More about the project", nav_contacts:"Contact",
     intro_h:"Enhancing governance capacities of local authorities using open data",
@@ -587,7 +589,8 @@ async function getData(sensor){
         return {data:x.o,live:true,period:{start:dayDate(a),end:dayDate(z)},base:null,cmp:"cmp_custom"};
       }
       const r=dailyWindow(dl,w); return {data:r.data,live:true,period:r.period,base:r.base,cmp:r.cmp};
-    }catch(e){ console.warn("Staticni podatki niso na voljo, demo:",e.message); }
+    }catch(e){ console.warn("Staticni podatki niso na voljo:",e.message);
+      return {data:{pedestrian:0,bike:0,car:0,heavy:0},live:true,nodata:true,period:null,base:null,cmp:null}; }
   }
   if(CONFIG.mode==="live"&&CONFIG.proxyUrl){
     try{ const r=await fetchLive(sensor); return {data:r.data,live:true,period:r.period}; }
@@ -598,7 +601,7 @@ async function getData(sensor){
 
 /* ---------- IZRIS ---------- */
 const C=2*Math.PI*44;
-const nf=new Intl.NumberFormat("en-US",{useGrouping:false});
+const nf=new Intl.NumberFormat("de-DE",{useGrouping:true,maximumFractionDigits:0});   /* pika za tisocice: 70.647 */
 const state={sensor:null,featuredKey:null,data:null,window:"month"};
 
 function shareDenom(d){ return CONFIG.shareMode==="modal"?(d.pedestrian+d.bike+d.car+d.heavy):(d.pedestrian+d.bike+d.car+d.heavy+d.night); }
@@ -622,22 +625,24 @@ function render(){
   const den=shareDenom(data);
   const fVal=data[featuredKey]||0, fPct=pct(fVal,den);
   document.getElementById("f-icon").innerHTML=ICONS[METRICS.find(m=>m.key===featuredKey).icon];
-  document.getElementById("f-val").textContent=nf.format(fVal);
+  const fmt=v=>state.nodata?"—":nf.format(v), fp=v=>state.nodata?"—":v.toFixed(2)+"%";
+  const kf=(str,n)=>String(Math.min(1,n/Math.max(str.length,1)).toFixed(3));   /* daljse stevilke manjse, da ne prekrijejo obroca */
+  const fv=document.getElementById("f-val"); fv.textContent=fmt(fVal); fv.style.setProperty("--k",kf(fv.textContent,5));
   document.getElementById("f-label").textContent=t("m_"+featuredKey);
-  document.getElementById("f-pct").textContent=fPct.toFixed(2)+"%";
+  document.getElementById("f-pct").textContent=fp(fPct);
   (function(){ const c=document.getElementById("f-cmp"), h=cmpHtml(featuredKey); if(h){ const tmp=document.createElement("div"); tmp.innerHTML=h; const n=tmp.firstChild; c.className=n.className; c.title=n.title; c.textContent=n.textContent; c.hidden=false; } else c.hidden=true; })();
 
   const off=C*(1-Math.min(fPct,100)/100), arc=document.getElementById("ring-arc");
   arc.style.transition="none"; arc.setAttribute("stroke-dashoffset",C);
   requestAnimationFrame(()=>{arc.style.transition="stroke-dashoffset .9s ease"; arc.setAttribute("stroke-dashoffset",off);});
-  document.getElementById("ring-text").textContent=fPct.toFixed(2)+"%";
+  document.getElementById("ring-text").textContent=fp(fPct);
 
   const others=METRICS.filter(m=>m.key!==featuredKey), grid=document.getElementById("secondary");
   grid.innerHTML="";
   others.forEach((m,i)=>{
     const v=data[m.key]||0, el=document.createElement("div");
     el.className="metric"; el.dataset.slot=i;
-    el.innerHTML='<span class="micon">'+ICONS[m.icon]+'</span><span class="mval">'+nf.format(v)+'</span><span class="mlabel">'+t("m_"+m.key)+'</span><span class="mpct">'+pct(v,den).toFixed(2)+'%</span>'+cmpHtml(m.key);
+    el.innerHTML='<span class="micon">'+ICONS[m.icon]+'</span><span class="mval" style="--k:'+kf(fmt(v),6)+'">'+fmt(v)+'</span><span class="mlabel">'+t("m_"+m.key)+'</span><span class="mpct">'+fp(pct(v,den))+'</span>'+cmpHtml(m.key);
     grid.appendChild(el);
   });
   layoutWires();
@@ -667,7 +672,7 @@ function applyLang(){
   document.getElementById("intro-h").textContent=t("intro_h");
   document.getElementById("intro-p").textContent=t("intro_p");
   document.getElementById("loc-link-label").textContent=t("loc_link");
-  document.getElementById("night-note").textContent=state.base?t(state.cmp||"cmp_week"):(state.window==="custom"?t("cmp_custom"):t("cmp_none"));
+  document.getElementById("night-note").textContent=state.nodata?t("no_data"):state.base?t(state.cmp||"cmp_week"):(state.window==="custom"?t("cmp_custom"):t("cmp_none"));
   document.getElementById("d-apply").textContent=t("range_apply");
   document.getElementById("pcal").title=t("pick_range"); document.getElementById("pcal").setAttribute("aria-label",t("pick_range"));
   document.getElementById("pcal").classList.toggle("on",state.window==="custom");
@@ -686,7 +691,8 @@ function applyLang(){
   render();
 }
 function setLang(l){ LANG=l; try{localStorage.setItem("ngodd_lang",l);}catch(e){} applyLang(); }
-function applyResult(r){ state.data=r.data; state.period=r.period; state.base=r.base||null; state.cmp=r.cmp||null; document.getElementById("demo-flag").hidden=r.live; }
+const okRes=r=>r&&r.live&&!r.nodata;
+function applyResult(r){ state.nodata=!!r.nodata; state.data=r.data; state.period=r.period; state.base=r.base||null; state.cmp=r.cmp||null; document.getElementById("demo-flag").hidden=r.live; }
 async function setupRange(){
   const dl=await loadDaily(state.sensor), fi=document.getElementById("d-from"), ti=document.getElementById("d-to");
   if(dl&&dl.days.length){ fi.min=ti.min=dl.days[0][0]; fi.max=ti.max=dl.days[dl.days.length-1][0]; }
@@ -728,13 +734,14 @@ async function loadMap(){
   g+='<span class="attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>';
   box.innerHTML=g; box.hidden=false;
 }
+let POOL=SENSORS;
 async function nextSensor(){
   const btn=document.getElementById("next-btn"); btn.disabled=true;
-  const n=SENSORS.length;
+  const n=POOL.length;
   for(let i=1;i<=n;i++){
-    const j=(state.idx+i)%n, s=SENSORS[j];
+    const j=(state.idx+i)%n, s=POOL[j];
     const r=await getData(s);
-    if(r.live||CONFIG.mode!=="static"){
+    if(okRes(r)||CONFIG.mode!=="static"){
       state.idx=j; state.sensor=s; applyResult(r);
       break;
     }
@@ -759,17 +766,22 @@ async function init(){
   document.getElementById("pcal").addEventListener("click",()=>{ if(state.window==="custom") setWindow(state.prevWindow||"month"); else { state.prevWindow=state.window; setWindow("custom"); } });
   document.getElementById("d-apply").addEventListener("click",async()=>{ const f=document.getElementById("d-from").value, to=document.getElementById("d-to").value; if(f&&to){ state.range={from:f,to}; await refresh(); } });
 
+  /* staticni nacin: v rotaciji samo senzorji, ki trenutno posiljajo podatke (status.json) */
+  if(CONFIG.mode==="static"){
+    try{ const r=await fetch(CONFIG.dataUrl+"status.json?v="+Math.floor(Date.now()/6e5),{cache:"no-cache"});
+      if(r.ok){ const st=(await r.json()).sensors||{}; const a=SENSORS.filter(s=>st[s.segmentId]&&st[s.segmentId].recent_rows>0); if(a.length) POOL=a; } }catch(e){}
+  }
   const idx=loadIndex();
-  state.idx=idx%SENSORS.length;
-  state.sensor=SENSORS[state.idx];
+  state.idx=idx%POOL.length;
+  state.sensor=POOL[state.idx];
   state.featuredKey=CONFIG.rotateFeaturedMetric?METRICS[idx%METRICS.length].key:METRICS[0].key;
 
   let res=await getData(state.sensor);
   /* staticni nacin: ce izbrani senzor nima podatkov, poisci naslednjega, ki jih ima */
-  if(CONFIG.mode==="static"&&!res.live){
-    for(let k=1;k<SENSORS.length&&!res.live;k++){
-      const s=SENSORS[(idx+k)%SENSORS.length], r=await getData(s);
-      if(r.live){ state.sensor=s; state.idx=(idx+k)%SENSORS.length; res=r; }
+  if(CONFIG.mode==="static"&&!okRes(res)){
+    for(let k=1;k<POOL.length&&!okRes(res);k++){
+      const s=POOL[(idx+k)%POOL.length], r=await getData(s);
+      if(okRes(r)){ state.sensor=s; state.idx=(idx+k)%POOL.length; res=r; }
     }
   }
   applyResult(res);
