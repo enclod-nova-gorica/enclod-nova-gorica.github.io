@@ -16,6 +16,7 @@ Okolje:
 """
 import csv, io, json, math, os, re, sys, time, urllib.parse, urllib.request, urllib.error
 from datetime import datetime, timedelta, timezone
+from zoneinfo import ZoneInfo
 
 TELRAAM_URL = "https://telraam-api.net/v1/reports/traffic"
 DATA_SINCE = datetime(2024, 1, 1, tzinfo=timezone.utc)
@@ -108,10 +109,10 @@ def write_csv(path, rows):
 
 
 # ---------------------------------------------------------------- zemljevidi
-MAP_VERSION = 1
+MAP_VERSION = 2
 MAP_W, MAP_H = 400, 260          # viewBox v px
 MAP_HALF_W_M = 380               # pol sirine izreza v metrih
-MAX_NEW_MAPS = 4                 # najvec novih zemljevidov na zagon (da objava ostane hitra)
+MAX_NEW_MAPS = 8                 # najvec novih zemljevidov na zagon (da objava ostane hitra)
 UA = "EnCLOD-NovaGorica-dashboard/1.0 (University of Ljubljana, Faculty of Architecture)"
 HW_CLASS = {
     "motorway": "major", "trunk": "major", "primary": "major",
@@ -162,11 +163,14 @@ def geocode(addr):
 
 
 def overpass_ways(lon, lat, radius):
-    q = (f'[out:json][timeout:40];way(around:{radius},{lat},{lon})'
-         f'[highway~"^({"|".join(HW_CLASS)})$"];out geom;')
+    hw = "|".join(HW_CLASS)
+    q = (f'[out:json][timeout:60];('
+         f'way(around:{radius},{lat},{lon})[highway~"^({hw})$"];'
+         f'way(around:{radius},{lat},{lon})[building];'
+         f');out geom;')
     for url in ("https://overpass-api.de/api/interpreter", "https://overpass.kumi.systems/api/interpreter"):
         try:
-            j = http_json(url, data=urllib.parse.urlencode({"data": q}).encode(), timeout=90)
+            j = http_json(url, data=urllib.parse.urlencode({"data": q}).encode(), timeout=120)
             time.sleep(2)
             return j.get("elements", [])
         except Exception as e:
@@ -186,43 +190,94 @@ def build_map(sid, addr):
         if not c:
             return None
         lon0, lat0 = c
-    ways = overpass_ways(lon0, lat0, int(MAP_HALF_W_M * 1.25))
+    ways = overpass_ways(lon0, lat0, int(MAP_HALF_W_M * 1.3))
     if ways is None:
         return None
     kx = math.cos(math.radians(lat0)) * 111320.0
     ky = 110540.0
     s = MAP_W / (2.0 * MAP_HALF_W_M)
+    margin = 30
 
     def xy(lon, lat):
         return (MAP_W / 2 + (lon - lon0) * kx * s, MAP_H / 2 - (lat - lat0) * ky * s)
 
-    def path(coords):
+    def simplify(coords, tol=1.2):
         out, last = [], None
         for lon, lat in coords:
             x, y = xy(lon, lat)
-            if last and abs(x - last[0]) < 1.2 and abs(y - last[1]) < 1.2:
+            if last and abs(x - last[0]) < tol and abs(y - last[1]) < tol:
                 continue
             out.append((x, y))
             last = (x, y)
-        if len(out) < 2:
-            return ""
-        margin = 40
-        if all(x < -margin or x > MAP_W + margin or y < -margin or y > MAP_H + margin for x, y in out):
-            return ""
-        return "M" + "L".join(f"{x:.1f} {y:.1f}" for x, y in out)
+        return out
 
-    streets = {}
+    def visible(pp):
+        xs = [p[0] for p in pp]; ys = [p[1] for p in pp]
+        return not (max(xs) < -margin or min(xs) > MAP_W + margin or max(ys) < -margin or min(ys) > MAP_H + margin)
+
+    def d_line(pp, nd=1):
+        return "M" + "L".join(f"{x:.{nd}f} {y:.{nd}f}" for x, y in pp)
+
+    streets, buildings, named = {}, [], {}
     for w in ways:
-        cls = HW_CLASS.get((w.get("tags") or {}).get("highway"))
+        tags = w.get("tags") or {}
         geom = w.get("geometry")
-        if not cls or not geom:
+        if not geom:
             continue
-        d = path([(g["lon"], g["lat"]) for g in geom])
-        if d:
-            streets.setdefault(cls, []).append(d)
-    seg = "".join(path(ln) for ln in lines)
+        coords = [(g["lon"], g["lat"]) for g in geom]
+        if "building" in tags and "highway" not in tags:
+            pp = simplify(coords, 0.8)
+            if len(pp) < 3 or not visible(pp):
+                continue
+            xs = [p[0] for p in pp]; ys = [p[1] for p in pp]
+            if (max(xs) - min(xs)) < 1.5 and (max(ys) - min(ys)) < 1.5:
+                continue
+            buildings.append(d_line(pp, 0) + "Z")
+            continue
+        cls = HW_CLASS.get(tags.get("highway"))
+        if not cls:
+            continue
+        pp = simplify(coords)
+        if len(pp) < 2 or not visible(pp):
+            continue
+        streets.setdefault(cls, []).append(d_line(pp))
+        name = tags.get("name")
+        if name and cls in ("major", "mid", "minor"):
+            named.setdefault(name, []).append((cls, pp))
+
+    # imena ulic: najdaljsi vidni odsek vsake ulice, najvec 5 napisov, brez prekrivanja
+    rank = {"major": 0, "mid": 1, "minor": 2}
+    cands = []
+    for name, parts in named.items():
+        best = None
+        for cls, pp in parts:
+            for (x1, y1), (x2, y2) in zip(pp, pp[1:]):
+                mx, my = (x1 + x2) / 2, (y1 + y2) / 2
+                if not (25 < mx < MAP_W - 25 and 14 < my < MAP_H - 14):
+                    continue
+                ln = math.hypot(x2 - x1, y2 - y1)
+                if best is None or ln > best[0]:
+                    best = (ln, mx, my, math.degrees(math.atan2(y2 - y1, x2 - x1)), cls)
+        if best and best[0] > 18:
+            cands.append((rank[best[4]], -best[0], name, best))
+    cands.sort()
+    labels = []
+    cx, cy = MAP_W / 2, MAP_H / 2
+    for _, _, name, (ln, mx, my, ang, cls) in cands:
+        if math.hypot(mx - cx, my - cy) < 22:
+            continue
+        if any(math.hypot(mx - l["x"], my - l["y"]) < 70 for l in labels):
+            continue
+        if ang > 90: ang -= 180
+        if ang < -90: ang += 180
+        labels.append({"t": name, "x": round(mx, 1), "y": round(my, 1), "a": round(ang, 1)})
+        if len(labels) >= 5:
+            break
+
+    seg = "".join(d_line(pp) for pp in (simplify(ln) for ln in lines) if len(pp) >= 2)
     return {"v": MAP_VERSION, "w": MAP_W, "h": MAP_H, "seg": seg, "pt": [MAP_W / 2, MAP_H / 2],
             "streets": {k: "".join(v) for k, v in streets.items()},
+            "buildings": "".join(buildings), "labels": labels,
             "attribution": "© OpenStreetMap contributors"}
 
 
@@ -237,17 +292,72 @@ def ensure_maps(ids):
                 prev = http_json(f"{PAGES_URL}data/map_{sid}.json?t={int(time.time())}", timeout=30)
             except Exception:
                 prev = None
+        m = None
         if prev and prev.get("v") == MAP_VERSION:
             m = prev
-        elif built >= MAX_NEW_MAPS:
-            m = None
-        else:
+        elif built < MAX_NEW_MAPS:
             built += 1
             m = build_map(sid, addrs.get(sid, "Nova Gorica"))
             print(f"  [{sid}] zemljevid {'pripravljen' if m else 'NI pripravljen'}")
+        if not m and prev:
+            m = prev                       # starejsa razlicica, dokler nova ni narejena
         if m:
             with open(path_out, "w", encoding="utf-8") as f:
                 json.dump(m, f, separators=(",", ":"))
+
+
+# ---------------------------------------------------------------- dnevni povzetki in povprecja
+LJ = ZoneInfo("Europe/Ljubljana")
+METRIC_KEYS = ("pedestrian", "bike", "car", "heavy")
+PROFILE_WEEKS = 8
+
+
+def fnum(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return 0.0
+
+
+def build_daily(sid, rows):
+    """Dnevne vsote (lokalni cas) in povprecni urni profil po dnevih v tednu."""
+    days = {}
+    parsed = []
+    for r in rows:
+        d = r.get("date")
+        if not d:
+            continue
+        try:
+            t = datetime.fromisoformat(str(d).replace("Z", "+00:00")).astimezone(LJ)
+        except ValueError:
+            continue
+        up = fnum(r.get("uptime"))
+        vals = [fnum(r.get(k)) for k in METRIC_KEYS]
+        parsed.append((t, up, vals))
+        key = t.strftime("%Y-%m-%d")
+        rec = days.setdefault(key, [0.0, 0.0, 0.0, 0.0, 0])
+        for i, v in enumerate(vals):
+            rec[i] += v
+        if up > 0:
+            rec[4] += 1
+    day_list = [[k] + [round(v) for v in rec[:4]] + [rec[4]] for k, rec in sorted(days.items())]
+    # urni profil: zadnjih PROFILE_WEEKS tednov, samo ure z delujocim senzorjem
+    prof = {}
+    if parsed:
+        last = max(p[0] for p in parsed)
+        since = last - timedelta(weeks=PROFILE_WEEKS)
+        for t, up, vals in parsed:
+            if t < since or up <= 0.3:
+                continue
+            k = f"{t.weekday()}-{t.hour}"
+            acc = prof.setdefault(k, [0.0, 0.0, 0.0, 0.0, 0])
+            for i, v in enumerate(vals):
+                acc[i] += v
+            acc[4] += 1
+    profile = {k: [round(a[i] / a[4], 1) for i in range(4)] + [a[4]] for k, a in prof.items() if a[4] >= 2}
+    with open(os.path.join(OUT, f"{sid}_daily.json"), "w", encoding="utf-8") as f:
+        json.dump({"segmentId": sid, "days": day_list, "profile": profile, "weeks": PROFILE_WEEKS},
+                  f, separators=(",", ":"))
 
 
 def main():
@@ -279,6 +389,10 @@ def main():
         allrows = [merged[k] for k in sorted(merged)]
         if allrows:
             write_csv(os.path.join(OUT, f"{sid}.csv"), allrows)
+            try:
+                build_daily(sid, allrows)
+            except Exception as e:
+                print(f"  [{sid}] dnevni povzetek: napaka {e}")
         slim = [{k: r.get(k) for k in SLIM_FIELDS} for r in recent]
         with open(os.path.join(OUT, f"{sid}.json"), "w", encoding="utf-8") as f:
             json.dump({"segmentId": sid, "generated": status["generated"], "rows": slim}, f, separators=(",", ":"))
