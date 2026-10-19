@@ -87,7 +87,7 @@
   .ring svg{transform:rotate(-90deg)}
   .ring .rtext{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:clamp(20px,2.4vw,34px);font-weight:500}
 
-  .secondary{display:grid;grid-template-columns:1fr 1fr;gap:clamp(16px,3vw,48px) clamp(24px,5vw,80px);justify-items:start}
+  .secondary{display:grid;grid-template-columns:repeat(3,auto);justify-content:space-between;gap:clamp(16px,3vw,48px) clamp(20px,3vw,48px);justify-items:start}
   .metric{display:flex;flex-direction:column;align-items:flex-start;min-width:120px}
   .metric .micon{width:30px;height:30px;margin-bottom:2px}
   .metric .mval{font-family:"Barlow Semi Condensed";font-weight:600;font-size:clamp(34px,4.4vw,62px);line-height:.9}
@@ -101,6 +101,17 @@
   .period .plabel{color:var(--ink-faint);font-weight:600}
   .period .pval{color:var(--ink);font-weight:700}
   .night-note{font-size:clamp(10px,.95vw,12px);color:var(--ink-faint);margin-top:2px}
+  .windowtabs{flex-wrap:wrap;row-gap:8px;gap:clamp(10px,1.3vw,20px)}
+  .wtab{font-size:clamp(11px,1.05vw,15px)!important;white-space:nowrap}
+  .cmp{display:inline-flex;align-items:center;gap:4px;font-size:clamp(11px,.95vw,13px);font-weight:600;letter-spacing:.02em;margin-top:4px;padding:2px 7px;border-radius:10px;background:rgba(255,255,255,.12);white-space:nowrap}
+  .cmp[hidden]{display:none}
+  .cmp.up{color:#d4f7dd} .cmp.down{color:#ffd9cf} .cmp.eq{color:var(--ink-muted)}
+  .featured .cmp{font-size:clamp(12px,1.1vw,15px);margin-top:8px}
+  .prange{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .prange[hidden]{display:none}
+  .prange input{font:600 13px/1 "Barlow",sans-serif;color:var(--slate);background:#fff;border:0;border-radius:4px;padding:4px 6px}
+  .prange button{font:600 12px/1 "Barlow",sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:transparent;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:5px 9px;cursor:pointer}
+  .prange button:hover{background:#fff;color:var(--slate)}
   .meta-note{font-size:clamp(10px,.95vw,12px);color:var(--ink-faint);margin-top:calc(4px - clamp(14px,2.2vw,26px))}
   .windowtabs{display:flex;gap:clamp(10px,1.6vw,24px);align-items:center;margin-top:clamp(6px,1.4vw,16px)}
   .wtab{background:none;border:0;padding:3px 0;cursor:pointer;color:var(--ink-faint);font:600 clamp(12px,1.2vw,16px)/1 "Barlow",sans-serif;letter-spacing:.05em;text-transform:uppercase;border-bottom:2px solid transparent}
@@ -127,7 +138,7 @@
     #wires{display:none}
     .featured{flex-direction:column;align-items:flex-start;gap:16px}
     .featured .big{font-size:clamp(60px,19vw,96px)}
-    .secondary{gap:20px 28px}
+    .secondary{grid-template-columns:1fr 1fr;justify-content:start;gap:20px 28px}
     .clock{margin-left:0}
   }
   @media (prefers-reduced-motion:reduce){*{transition:none!important}}
@@ -208,10 +219,11 @@
     <svg class="pico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 2v3M17 2v3M3.5 8.5h17M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
     <span class="plabel" id="period-label">Data period</span>
     <span class="pval" id="period-val">—</span>
+    <span class="prange" id="prange" hidden><input type="date" id="d-from"><span id="range-to">do</span><input type="date" id="d-to"><button type="button" id="d-apply">Prikaži</button></span>
   </div>
   <div class="actions">
-    <a class="dl-link" id="dl-link" href="#">Download data</a>
     <button class="dl-link next-btn" id="next-btn" type="button">Next location</button>
+    <a class="dl-link" id="dl-link" href="#">Download data</a>
   </div>
     </div>
     <div class="side">
@@ -222,6 +234,8 @@
       <button class="wtab" data-window="hour" type="button"></button>
       <button class="wtab" data-window="day" type="button"></button>
       <button class="wtab" data-window="week" type="button"></button>
+      <button class="wtab" data-window="month" type="button"></button>
+      <button class="wtab" data-window="custom" type="button"></button>
     </div>
   </div>
 
@@ -233,6 +247,7 @@
         <span class="big" id="f-val">0</span>
         <span class="flabel" id="f-label">—</span>
         <span class="fpct" id="f-pct">0%</span>
+        <span class="cmp" id="f-cmp" hidden></span>
       </div>
       <div class="ring">
         <svg viewBox="0 0 100 100" width="100%" height="100%">
@@ -286,15 +301,14 @@ const CONFIG = {
   reportFormat: "per-hour",     // S2 podpira tudi "per-quarter" (15 min)
   nightStart: 22, nightEnd: 6,
   rotateFeaturedMetric: true,
-  shareMode: "mockup"           // "mockup" (vseh 5) | "modal" (samo načini)
+  shareMode: "modal"            // delezi med stirimi nacini prometa
 };
 
 const METRICS = [
   { key:"pedestrian", field:"pedestrian", icon:"walk"  },
   { key:"bike",       field:"bike",       icon:"bike"  },
   { key:"car",        field:"car",        icon:"car"   },
-  { key:"heavy",      field:"heavy",      icon:"truck" },
-  { key:"night",      field:null,         icon:"night" }
+  { key:"heavy",      field:"heavy",      icon:"truck" }
 ];
 
 /* 26 senzorjev Telraam S2 v mreži Nova Gorica (pravi segmentId-ji, junij 2026).
@@ -305,96 +319,103 @@ const METRICS = [
 const SENSORS = [
   { name:"Prvomajska ulica", address:"Prvomajska ulica 37, 5000 Nova Gorica", segmentId:"9000008738",
     telraamUrl:"https://telraam.net/en/location/9000008738",
-    demo:{ pedestrian:8401, bike:5485, car:82953, heavy:5847, night:8284 } },
+    demo:{ pedestrian:8401, bike:5485, car:82953, heavy:5847 } },
   { name:"Erjavčeva ulica", address:"Erjavčeva ulica 4, 5000 Nova Gorica", segmentId:"9000008737",
     telraamUrl:"https://telraam.net/en/location/9000008737",
-    demo:{ pedestrian:4307, bike:7043, car:64408, heavy:3665, night:12805 } },
+    demo:{ pedestrian:4307, bike:7043, car:64408, heavy:3665 } },
   { name:"Vodovodna pot", address:"Vodovodna pot 0, 5000 Nova Gorica", segmentId:"9000011462",
     telraamUrl:"https://telraam.net/en/location/9000011462",
-    demo:{ pedestrian:6989, bike:8712, car:109229, heavy:9999, night:11525 } },
+    demo:{ pedestrian:6989, bike:8712, car:109229, heavy:9999 } },
   { name:"Vojkova cesta", address:"Vojkova cesta 68, 5000 Nova Gorica", segmentId:"9000010817",
     telraamUrl:"https://telraam.net/en/location/9000010817",
-    demo:{ pedestrian:8310, bike:9187, car:82716, heavy:7371, night:12068 } },
+    demo:{ pedestrian:8310, bike:9187, car:82716, heavy:7371 } },
   { name:"Kostanjeviška cesta", address:"Kostanjeviška cesta 18, 5000 Nova Gorica", segmentId:"9000010038",
     telraamUrl:"https://telraam.net/en/location/9000010038",
-    demo:{ pedestrian:10705, bike:6243, car:45054, heavy:3335, night:15037 } },
+    demo:{ pedestrian:10705, bike:6243, car:45054, heavy:3335 } },
   { name:"Skalniška cesta", address:"Skalniška cesta 10, 5250 Solkan", segmentId:"9000009285",
     telraamUrl:"https://telraam.net/en/location/9000009285",
-    demo:{ pedestrian:11219, bike:6459, car:46709, heavy:8601, night:9853 } },
+    demo:{ pedestrian:11219, bike:6459, car:46709, heavy:8601 } },
   { name:"Vipavska cesta", address:"Vipavska cesta 2, 5000 Nova Gorica", segmentId:"9000009047",
     telraamUrl:"https://telraam.net/en/location/9000009047",
-    demo:{ pedestrian:8028, bike:4289, car:83848, heavy:2531, night:9685 } },
+    demo:{ pedestrian:8028, bike:4289, car:83848, heavy:2531 } },
   { name:"Vojkova cesta", address:"Vojkova cesta 68, 5000 Nova Gorica", segmentId:"9000009352",
     telraamUrl:"https://telraam.net/en/location/9000009352",
-    demo:{ pedestrian:6422, bike:8060, car:70647, heavy:7848, night:8180 } },
+    demo:{ pedestrian:6422, bike:8060, car:70647, heavy:7848 } },
   { name:"Kidričeva ulica", address:"Kidričeva ulica 9, 5000 Nova Gorica", segmentId:"9000009137",
     telraamUrl:"https://telraam.net/en/location/9000009137",
-    demo:{ pedestrian:3746, bike:4249, car:49518, heavy:7220, night:11828 } },
+    demo:{ pedestrian:3746, bike:4249, car:49518, heavy:7220 } },
   { name:"Soška cesta", address:"Soška cesta 1a, 5250 Solkan", segmentId:"9000009106",
     telraamUrl:"https://telraam.net/en/location/9000009106",
-    demo:{ pedestrian:10774, bike:5110, car:69674, heavy:8045, night:11251 } },
+    demo:{ pedestrian:10774, bike:5110, car:69674, heavy:8045 } },
   { name:"Prvomajska ulica", address:"Prvomajska ulica 28a, 5000 Nova Gorica", segmentId:"9000009105",
     telraamUrl:"https://telraam.net/en/location/9000009105",
-    demo:{ pedestrian:5917, bike:6416, car:80993, heavy:9053, night:12890 } },
+    demo:{ pedestrian:5917, bike:6416, car:80993, heavy:9053 } },
   { name:"Vojkova cesta", address:"Vojkova cesta 75, 5000 Nova Gorica", segmentId:"9000009063",
     telraamUrl:"https://telraam.net/en/location/9000009063",
-    demo:{ pedestrian:10194, bike:3742, car:58168, heavy:3246, night:13115 } },
+    demo:{ pedestrian:10194, bike:3742, car:58168, heavy:3246 } },
   { name:"Kolodvorska pot", address:"Kolodvorska pot 8, 5000 Nova Gorica", segmentId:"9000009062",
     telraamUrl:"https://telraam.net/en/location/9000009062",
-    demo:{ pedestrian:8371, bike:4910, car:107567, heavy:8433, night:8756 } },
+    demo:{ pedestrian:8371, bike:4910, car:107567, heavy:8433 } },
   { name:"Ulica Zorka Jelinčiča", address:"Ulica Zorka Jelinčiča 1, 5000 Nova Gorica", segmentId:"9000009039",
     telraamUrl:"https://telraam.net/en/location/9000009039",
-    demo:{ pedestrian:3977, bike:9568, car:107305, heavy:4233, night:12788 } },
+    demo:{ pedestrian:3977, bike:9568, car:107305, heavy:4233 } },
   { name:"Vipavska cesta", address:"Vipavska cesta 58, 5000 Nova Gorica", segmentId:"9000009038",
     telraamUrl:"https://telraam.net/en/location/9000009038",
-    demo:{ pedestrian:11183, bike:4740, car:55783, heavy:6481, night:15062 } },
+    demo:{ pedestrian:11183, bike:4740, car:55783, heavy:6481 } },
   { name:"Vojkova cesta", address:"Vojkova cesta 19, 5250 Solkan", segmentId:"9000009033",
     telraamUrl:"https://telraam.net/en/location/9000009033",
-    demo:{ pedestrian:7154, bike:8164, car:88011, heavy:9773, night:12955 } },
+    demo:{ pedestrian:7154, bike:8164, car:88011, heavy:9773 } },
   { name:"Kromberška cesta", address:"Kromberška cesta 1, 5000 Nova Gorica", segmentId:"9000008933",
     telraamUrl:"https://telraam.net/en/location/9000008933",
-    demo:{ pedestrian:3576, bike:9653, car:48967, heavy:2857, night:13714 } },
+    demo:{ pedestrian:3576, bike:9653, car:48967, heavy:2857 } },
   { name:"Ulica Karla Lavriča", address:"Ulica Karla Lavriča 1, 5000 Nova Gorica", segmentId:"9000008931",
     telraamUrl:"https://telraam.net/en/location/9000008931",
-    demo:{ pedestrian:6172, bike:8453, car:77090, heavy:7068, night:10061 } },
+    demo:{ pedestrian:6172, bike:8453, car:77090, heavy:7068 } },
   { name:"Ulica IX. korpusa", address:"Ulica IX. korpusa 96, 5000 Nova Gorica", segmentId:"9000008925",
     telraamUrl:"https://telraam.net/en/location/9000008925",
-    demo:{ pedestrian:4454, bike:8064, car:107034, heavy:8791, night:16602 } },
+    demo:{ pedestrian:4454, bike:8064, car:107034, heavy:8791 } },
   { name:"Delpinova ulica", address:"Delpinova ulica 13, 5000 Nova Gorica", segmentId:"9000008924",
     telraamUrl:"https://telraam.net/en/location/9000008924",
-    demo:{ pedestrian:3892, bike:5984, car:69299, heavy:5581, night:9468 } },
+    demo:{ pedestrian:3892, bike:5984, car:69299, heavy:5581 } },
   { name:"Erjavčeva ulica", address:"Erjavčeva ulica 45, 5000 Nova Gorica", segmentId:"9000008920",
     telraamUrl:"https://telraam.net/en/location/9000008920",
-    demo:{ pedestrian:11732, bike:8104, car:54287, heavy:5984, night:10354 } },
+    demo:{ pedestrian:11732, bike:8104, car:54287, heavy:5984 } },
   { name:"Rejčeva cesta", address:"Rejčeva cesta 1, 5000 Nova Gorica", segmentId:"9000008918",
     telraamUrl:"https://telraam.net/en/location/9000008918",
-    demo:{ pedestrian:8668, bike:6952, car:94820, heavy:4098, night:12087 } },
+    demo:{ pedestrian:8668, bike:6952, car:94820, heavy:4098 } },
   { name:"Ulica 9. korpusa", address:"Ulica 9. korpusa 99a, 5000 Nova Gorica", segmentId:"9000008742",
     telraamUrl:"https://telraam.net/en/location/9000008742",
-    demo:{ pedestrian:11864, bike:3694, car:58451, heavy:2756, night:9413 } },
+    demo:{ pedestrian:11864, bike:3694, car:58451, heavy:2756 } },
   { name:"Tolminskih puntarjev", address:"Tolminskih puntarjev 1, 5000 Nova Gorica", segmentId:"9000008741",
     telraamUrl:"https://telraam.net/en/location/9000008741",
-    demo:{ pedestrian:5850, bike:10550, car:69603, heavy:6050, night:10518 } },
+    demo:{ pedestrian:5850, bike:10550, car:69603, heavy:6050 } },
   { name:"Kidričeva ulica", address:"Kidričeva ulica 1, 5000 Nova Gorica", segmentId:"9000008740",
     telraamUrl:"https://telraam.net/en/location/9000008740",
-    demo:{ pedestrian:5506, bike:4072, car:56962, heavy:8559, night:9079 } },
+    demo:{ pedestrian:5506, bike:4072, car:56962, heavy:8559 } },
   { name:"Cankarjeva cesta", address:"Cankarjeva cesta 10, 5000 Nova Gorica", segmentId:"9000008736",
     telraamUrl:"https://telraam.net/en/location/9000008736",
-    demo:{ pedestrian:10362, bike:5051, car:61104, heavy:9903, night:8861 } },
+    demo:{ pedestrian:10362, bike:5051, car:61104, heavy:9903 } },
 ];
 
 /* ---------- DVOJEZIČNOST (en gumb preklopi med SLO/EN) ---------- */
 const I18N = {
   sl:{
     brand_kicker:"Projekt EnCLOD – Interreg Central Europe",
-    win_hour:"Zadnja ura", win_day:"Zadnji dan", win_week:"Zadnji teden",
+    win_hour:"Zadnja ura", win_day:"Zadnji dan", win_week:"Zadnji teden", win_month:"Zadnji mesec", win_custom:"Po izbiri",
+    range_apply:"Prikaži", range_to:"do",
+    cmp_up:"nad povprečjem", cmp_down:"pod povprečjem", cmp_eq:"v povprečju",
+    cmp_hour:"Primerjava: povprečje iste ure na isti dan v tednu v zadnjih 8 tednih.",
+    cmp_day:"Primerjava: povprečje istega dne v tednu v zadnjih 8 tednih.",
+    cmp_week:"Primerjava: povprečje 8 predhodnih tednov.",
+    cmp_month:"Primerjava: povprečje do 6 predhodnih 30-dnevnih obdobij.",
+    cmp_custom:"Za izbrano obdobje primerjava ni prikazana.",
+    cmp_none:"Za primerjavo s povprečjem še ni dovolj starejših podatkov.",
     brand:"Nova Gorica – nadzorna plošča odprtih podatkov",
     nav_about:"O nas", nav_projects:"Več o projektu", nav_contacts:"Kontakt",
     intro_h:"Krepitev upravljavskih zmogljivosti lokalnih skupnosti z odprtimi podatki",
     intro_p:"Podatki so surovina za prostorsko upravljanje v digitalni dobi, a javnim ustanovam pogosto manjka zmogljivosti, da bi jih znale dobro izrabiti. Znanje civilne družbe in zasebnega sektorja na tehnološkem področju pri reševanju mestnih izzivov večinoma ostaja neizkoriščeno. Projekt EnCLOD to vrzel premošča s sodelovanjem med lokalnimi oblastmi, civilno družbo in zasebnim sektorjem v petih državah. Skupaj krepijo lokalno upravljanje: javne uslužbence usposabljajo za delo z odprtimi podatki, internetom stvari in digitalnimi dvojčki, pripravljajo tehnološko obarvane akcijske načrte in povezujejo skupnosti na dogodkih, kot so hekatoni.",
     loc_link:"Odpri na Telraam – nastavitve",
-    m_pedestrian:"Pešci", m_bike:"Dvokolesa", m_car:"Avtomobili", m_heavy:"Tovorna vozila", m_night:"Noč*",
-    night_note:"* Noč: skupni promet med 22.00 in 6.00.",
+    m_pedestrian:"Pešci", m_bike:"Dvokolesa", m_car:"Avtomobili", m_heavy:"Tovorna vozila",
     source_note:"Vir: senzorji Telraam S2, mreža Nova Gorica. Odprti podatki.", rotate_note:"Ob vsakem nalaganju je prikazan drug senzor.",
     dl_link:"↓ Prenos podatkov (CSV)", dl_busy:"Pripravljam…", dl_none:"Za ta senzor trenutno ni podatkov za prenos.", dl_live:"Prenos je na voljo, ko plošča teče v živo (prek proxyja).",
     period_label:"Obdobje podatkov",
@@ -407,14 +428,21 @@ const I18N = {
   },
   en:{
     brand_kicker:"EnCLOD Project – Interreg Central Europe",
-    win_hour:"Last hour", win_day:"Last day", win_week:"Last week",
+    win_hour:"Last hour", win_day:"Last day", win_week:"Last week", win_month:"Last month", win_custom:"Custom",
+    range_apply:"Show", range_to:"to",
+    cmp_up:"above average", cmp_down:"below average", cmp_eq:"about average",
+    cmp_hour:"Compared with the average for the same hour and weekday over the last 8 weeks.",
+    cmp_day:"Compared with the average for the same weekday over the last 8 weeks.",
+    cmp_week:"Compared with the average of the 8 preceding weeks.",
+    cmp_month:"Compared with the average of up to 6 preceding 30-day periods.",
+    cmp_custom:"No comparison is shown for a custom period.",
+    cmp_none:"Not enough earlier data yet for a comparison with the average.",
     brand:"Nova Gorica Open Data Dashboard",
     nav_about:"About us", nav_projects:"More about the project", nav_contacts:"Contact",
     intro_h:"Enhancing governance capacities of local authorities using open data",
     intro_p:"Data is the raw material for territorial governance in our digital age, but public authorities often lack the capacity to use it effectively. The expertise of civil society and the private sector on technological matters frequently stays untapped when it comes to solving urban problems. The EnCLOD project closes that gap by building collaboration between local authorities, civil society and the private sector across five countries. Together they work on better local governance: training public officials on open data, the Internet of Things and digital twins, drafting tech-related action plans, and bringing communities together at events such as hackathons.",
     loc_link:"Open on Telraam – settings",
-    m_pedestrian:"Pedestrians", m_bike:"Two-wheelers", m_car:"Cars", m_heavy:"Heavy vehicles", m_night:"Night*",
-    night_note:"* Night: total traffic between 22:00 and 06:00.",
+    m_pedestrian:"Pedestrians", m_bike:"Two-wheelers", m_car:"Cars", m_heavy:"Heavy vehicles",
     source_note:"Source: Telraam S2 sensors, Nova Gorica network. Open data.", rotate_note:"A different sensor is shown on each load.",
     dl_link:"↓ Download data (CSV)", dl_busy:"Preparing…", dl_none:"No data available to download for this sensor.", dl_live:"Download is available when the dashboard runs live (via the proxy).",
     period_label:"Data period",
@@ -437,6 +465,7 @@ function fmtPeriod(a,z){
   const full=d=>`${d.getDate()}${dot} ${M[d.getMonth()]} ${d.getFullYear()}`;
   const spanH=(d2-d1)/36e5, sameDay=d1.getFullYear()===d2.getFullYear()&&d1.getMonth()===d2.getMonth()&&d1.getDate()===d2.getDate();
   if(spanH>0&&spanH<=6&&sameDay){ const hm=d=>String(d.getHours()).padStart(2,"0")+":"+String(d.getMinutes()).padStart(2,"0"); return `${full(d2)}, ${hm(d1)}–${hm(d2)}`; }
+  if(sameDay) return full(d1);
   if(d1.getFullYear()===d2.getFullYear()&&d1.getMonth()===d2.getMonth()) return `${d1.getDate()}${dot}–${full(d2)}`;
   if(d1.getFullYear()===d2.getFullYear()) return `${d1.getDate()}${dot} ${M[d1.getMonth()]} – ${full(d2)}`;
   return `${full(d1)} – ${full(d2)}`;
@@ -495,7 +524,7 @@ function demoWindow(){
   const w=state.window||"hour";
   if(w==="hour"){ const e=new Date(); e.setMinutes(0,0,0); return { start:new Date(e.getTime()-36e5), end:e, hour:true }; }
   const end=new Date(); end.setHours(0,0,0,0);
-  return { start:new Date(end.getTime()-(w==="day"?1:7)*864e5), end };
+  return { start:new Date(end.getTime()-(w==="day"?1:w==="month"?30:7)*864e5), end };
 }
 async function fetchStatic(sensor){
   const res=await fetch(CONFIG.dataUrl+sensor.segmentId+".json?v="+Math.floor(Date.now()/6e5),{cache:"no-cache"});
@@ -504,16 +533,59 @@ async function fetchStatic(sensor){
   const all=(j.rows||[]).filter(r=>!isNaN(Date.parse(r.date)));
   if(!all.length) throw new Error("empty report");
   const w=state.window||"hour";
-  if(w==="hour"){ const r=latestRow(all); return { data:aggregate([r]), period:hourWindow(r) }; }
+  if(w==="hour"){ const r=latestRow(all); return { data:aggregate([r]), period:hourWindow(r), row:r }; }
   const end=Date.now(), span=(w==="day"?1:7)*864e5;
   const rows=all.filter(r=>Date.parse(r.date)>end-span);
   if(!rows.length) throw new Error("no rows in window");
   return { data:aggregate(rows), period:periodFromRows(rows,new Date(end-span),new Date(end)) };
 }
+/* ---------- DNEVNI POVZETKI, POVPRECJA ---------- */
+const DAILY={};
+const _LJ_DATE=new Intl.DateTimeFormat("en-CA",{timeZone:"Europe/Ljubljana",year:"numeric",month:"2-digit",day:"2-digit"});
+const _LJ_WD=new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Ljubljana",weekday:"short"});
+const WD={Mon:0,Tue:1,Wed:2,Thu:3,Fri:4,Sat:5,Sun:6};
+const ljDay=d=>_LJ_DATE.format(d);
+const dayDate=k=>new Date(k+"T12:00:00");
+const addDays=(k,n)=>{ const d=dayDate(k); d.setDate(d.getDate()+n); return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); };
+async function loadDaily(sensor){
+  const id=sensor.segmentId;
+  if(DAILY[id]===undefined){
+    try{ const r=await fetch(CONFIG.dataUrl+id+"_daily.json?v="+Math.floor(Date.now()/6e5),{cache:"no-cache"});
+      if(r.ok){ const j=await r.json(); const map={}; (j.days||[]).forEach(d=>map[d[0]]=d); DAILY[id]={days:j.days||[],map,profile:j.profile||{}}; } else DAILY[id]=null;
+    }catch(e){ DAILY[id]=null; }
+  }
+  return DAILY[id];
+}
+const sumDays=(dl,from,to)=>{ const o={pedestrian:0,bike:0,car:0,heavy:0}; let n=0; for(let k=from;k<=to;k=addDays(k,1)){ const d=dl.map[k]; if(d&&d[5]>0){ o.pedestrian+=d[1]; o.bike+=d[2]; o.car+=d[3]; o.heavy+=d[4]; n++; } } return {o,n}; };
+const meanOf=list=>{ if(!list.length) return null; const o={pedestrian:0,bike:0,car:0,heavy:0}; list.forEach(x=>{ for(const k in o) o[k]+=x[k]; }); for(const k in o) o[k]/=list.length; return o; };
+function lastFullDay(dl){ const today=ljDay(new Date()); for(let i=dl.days.length-1;i>=0;i--){ const d=dl.days[i]; if(d[0]<today&&d[5]>0) return d[0]; } return null; }
+function dailyWindow(dl,w){
+  const L=lastFullDay(dl); if(!L) throw new Error("no daily data");
+  const len=w==="day"?1:w==="week"?7:30, from=addDays(L,-(len-1));
+  const cur=sumDays(dl,from,L); if(!cur.n) throw new Error("no data in window");
+  const blocks=[], nb=w==="month"?6:8, step=w==="day"?7:len, minN=Math.ceil(len*0.8);
+  for(let b=1;b<=nb;b++){ const f=addDays(from,-step*b), t2=addDays(L,-step*b); const x=sumDays(dl,f,t2); if(x.n>=minN) blocks.push(x.o); }
+  return { data:cur.o, period:{start:dayDate(from),end:dayDate(L)}, base:meanOf(blocks), cmp:"cmp_"+w };
+}
 async function getData(sensor){
   if(CONFIG.mode==="static"){
-    try{ const r=await fetchStatic(sensor); return {data:r.data,live:true,period:r.period}; }
-    catch(e){ console.warn("Staticni podatki niso na voljo, demo:",e.message); }
+    try{
+      const w=state.window||"week";
+      if(w==="hour"){
+        const r=await fetchStatic(sensor), dl=await loadDaily(sensor);
+        let base=null;
+        if(dl&&r.row){ const d=new Date(r.row.date), k=WD[_LJ_WD.format(d)]+"-"+localHourLJ(d), p=dl.profile[k]; if(p) base={pedestrian:p[0],bike:p[1],car:p[2],heavy:p[3]}; }
+        return {data:r.data,live:true,period:r.period,base,cmp:"cmp_hour"};
+      }
+      const dl=await loadDaily(sensor); if(!dl) throw new Error("no daily file");
+      if(w==="custom"){
+        const f=state.range&&state.range.from, to=state.range&&state.range.to;
+        if(!f||!to) throw new Error("no range");
+        const a=f<=to?f:to, z=f<=to?to:f, x=sumDays(dl,a,z); if(!x.n) throw new Error("no data in range");
+        return {data:x.o,live:true,period:{start:dayDate(a),end:dayDate(z)},base:null,cmp:"cmp_custom"};
+      }
+      const r=dailyWindow(dl,w); return {data:r.data,live:true,period:r.period,base:r.base,cmp:r.cmp};
+    }catch(e){ console.warn("Staticni podatki niso na voljo, demo:",e.message); }
   }
   if(CONFIG.mode==="live"&&CONFIG.proxyUrl){
     try{ const r=await fetchLive(sensor); return {data:r.data,live:true,period:r.period}; }
@@ -525,10 +597,17 @@ async function getData(sensor){
 /* ---------- IZRIS ---------- */
 const C=2*Math.PI*44;
 const nf=new Intl.NumberFormat("en-US",{useGrouping:false});
-const state={sensor:null,featuredKey:null,data:null,window:"hour"};
+const state={sensor:null,featuredKey:null,data:null,window:"week"};
 
 function shareDenom(d){ return CONFIG.shareMode==="modal"?(d.pedestrian+d.bike+d.car+d.heavy):(d.pedestrian+d.bike+d.car+d.heavy+d.night); }
 function pct(v,den){ return den>0?(v/den*100):0; }
+function cmpHtml(key){
+  const b=state.base, v=state.data&&state.data[key];
+  if(!b||!(b[key]>=3)||v==null) return "";   /* premajhno povprecje = prevec suma */
+  const d=(v-b[key])/b[key]*100, cls=Math.abs(d)<5?"eq":(d>0?"up":"down");
+  const arrow=cls==="eq"?"≈":(cls==="up"?"▲":"▼"), txt=cls==="eq"?t("cmp_eq"):(Math.abs(d).toFixed(0)+" % "+t(cls==="up"?"cmp_up":"cmp_down"));
+  return '<span class="cmp '+cls+'" title="'+t(state.cmp||"cmp_week")+'">'+arrow+" "+txt+'</span>';
+}
 
 function render(){
   const {sensor,data,featuredKey}=state; if(!sensor||!data) return;
@@ -544,6 +623,7 @@ function render(){
   document.getElementById("f-val").textContent=nf.format(fVal);
   document.getElementById("f-label").textContent=t("m_"+featuredKey);
   document.getElementById("f-pct").textContent=fPct.toFixed(2)+"%";
+  (function(){ const c=document.getElementById("f-cmp"), h=cmpHtml(featuredKey); if(h){ const tmp=document.createElement("div"); tmp.innerHTML=h; const n=tmp.firstChild; c.className=n.className; c.title=n.title; c.textContent=n.textContent; c.hidden=false; } else c.hidden=true; })();
 
   const off=C*(1-Math.min(fPct,100)/100), arc=document.getElementById("ring-arc");
   arc.style.transition="none"; arc.setAttribute("stroke-dashoffset",C);
@@ -555,7 +635,7 @@ function render(){
   others.forEach((m,i)=>{
     const v=data[m.key]||0, el=document.createElement("div");
     el.className="metric"; el.dataset.slot=i;
-    el.innerHTML='<span class="micon">'+ICONS[m.icon]+'</span><span class="mval">'+nf.format(v)+'</span><span class="mlabel">'+t("m_"+m.key)+'</span><span class="mpct">'+pct(v,den).toFixed(2)+'%</span>';
+    el.innerHTML='<span class="micon">'+ICONS[m.icon]+'</span><span class="mval">'+nf.format(v)+'</span><span class="mlabel">'+t("m_"+m.key)+'</span><span class="mpct">'+pct(v,den).toFixed(2)+'%</span>'+cmpHtml(m.key);
     grid.appendChild(el);
   });
   layoutWires();
@@ -568,10 +648,10 @@ function layoutWires(){
   const left=el=>{const r=el.getBoundingClientRect();return{x:r.left-b.left,y:r.top-b.top+r.height/2};};
   const right=el=>{const r=el.getBoundingClientRect();return{x:r.right-b.left,y:r.top-b.top+r.height/2};};
   const feat=document.querySelector(".featured"), slots=[...document.querySelectorAll(".metric")];
-  if(slots.length<4){svg.innerHTML="";return;}
+  if(slots.length<3||getComputedStyle(svg).display==="none"){svg.innerHTML="";return;}
   const fp=right(feat), s=slots.map(left), sr=slots.map(right);
   const curve=(a,z)=>{const mx=(a.x+z.x)/2;return`M ${a.x} ${a.y} C ${mx} ${a.y}, ${mx} ${z.y}, ${z.x} ${z.y}`;};
-  svg.innerHTML=[curve(fp,s[0]),curve(fp,s[1]),curve(sr[0],s[3]),curve(sr[1],s[2])]
+  svg.innerHTML=[curve(fp,s[0]),curve(sr[0],s[1]),curve(sr[1],s[2])]
     .map(d=>`<path d="${d}" fill="none" stroke="var(--wire)" stroke-width="1.4"/>`).join("");
 }
 
@@ -585,7 +665,11 @@ function applyLang(){
   document.getElementById("intro-h").textContent=t("intro_h");
   document.getElementById("intro-p").textContent=t("intro_p");
   document.getElementById("loc-link-label").textContent=t("loc_link");
-  document.getElementById("night-note").textContent=t("night_note");
+  document.getElementById("night-note").textContent=state.base?t(state.cmp||"cmp_week"):(state.window==="custom"?t("cmp_custom"):t("cmp_none"));
+  document.getElementById("d-apply").textContent=t("range_apply");
+  document.getElementById("range-to").textContent=t("range_to");
+  document.getElementById("prange").hidden=state.window!=="custom";
+  document.getElementById("period-val").hidden=state.window==="custom";
   document.getElementById("meta-note").textContent=t("source_note")+" · "+t("rotate_note");
   document.getElementById("dl-link").textContent=t("dl_link");
   document.getElementById("authors").innerHTML=t("authors");
@@ -594,17 +678,24 @@ function applyLang(){
   document.getElementById("period-val").textContent=state.period?fmtPeriod(state.period.start,state.period.end):"—";
   document.getElementById("demo-flag").textContent=t("demo");
   document.getElementById("lang-btn").textContent=t("lang_other");   // en gumb: prikaže CILJNI jezik
-  document.querySelectorAll(".wtab").forEach(el=>{ el.textContent=t("win_"+el.dataset.window); el.classList.toggle("active", el.dataset.window===(state.window||"hour")); });
+  document.querySelectorAll(".wtab").forEach(el=>{ el.textContent=t("win_"+el.dataset.window); el.classList.toggle("active", el.dataset.window===(state.window||"week")); });
   render();
 }
 function setLang(l){ LANG=l; try{localStorage.setItem("ngodd_lang",l);}catch(e){} applyLang(); }
+function applyResult(r){ state.data=r.data; state.period=r.period; state.base=r.base||null; state.cmp=r.cmp||null; document.getElementById("demo-flag").hidden=r.live; }
+async function setupRange(){
+  const dl=await loadDaily(state.sensor), fi=document.getElementById("d-from"), ti=document.getElementById("d-to");
+  if(dl&&dl.days.length){ fi.min=ti.min=dl.days[0][0]; fi.max=ti.max=dl.days[dl.days.length-1][0]; }
+  if(!state.range){ const L=(dl&&lastFullDay(dl))||ljDay(new Date()); state.range={from:addDays(L,-13),to:L}; }
+  fi.value=state.range.from; ti.value=state.range.to;
+}
+async function refresh(){ try{ applyResult(await getData(state.sensor)); }catch(e){ console.warn(e); } applyLang(); }
 async function setWindow(w){
   if(state.window===w) return;
   state.window=w;
   document.querySelectorAll(".wtab").forEach(el=>el.classList.toggle("active", el.dataset.window===w));
-  try{ const {data,live,period}=await getData(state.sensor); state.data=data; state.period=period; document.getElementById("demo-flag").hidden=live; }
-  catch(e){ console.warn(e); }
-  applyLang();
+  if(w==="custom") await setupRange();
+  await refresh();
 }
 
 /* ---------- ZEMLJEVID LOKACIJE ---------- */
@@ -620,12 +711,16 @@ async function loadMap(){
   if(state.sensor!==s) return;
   if(!m||!m.streets){ box.hidden=true; box.innerHTML=""; return; }
   let g='<svg viewBox="0 0 '+m.w+' '+m.h+'" preserveAspectRatio="xMidYMid slice" role="img" aria-label="'+t("map_label")+'">';
+  if(m.buildings) g+='<path d="'+m.buildings+'" fill="#fff" fill-opacity=".17" stroke="#fff" stroke-opacity=".28" stroke-width=".5"/>';
   ["service","minor","mid","major"].forEach(c=>{ if(m.streets[c]) g+='<path d="'+m.streets[c]+'" fill="none" stroke="#fff" stroke-opacity="'+MAP_O[c]+'" stroke-width="'+MAP_W[c]+'" stroke-linecap="round" stroke-linejoin="round"/>'; });
   if(m.seg){ g+='<path d="'+m.seg+'" fill="none" stroke="#0b3c69" stroke-width="12" stroke-linecap="round" stroke-linejoin="round" stroke-opacity=".55"/>'
              +'<path d="'+m.seg+'" fill="none" stroke="#fff" stroke-width="6" stroke-linecap="round" stroke-linejoin="round"/>'; }
   const x=m.pt[0], y=m.pt[1];
   g+='<circle class="pulse" cx="'+x+'" cy="'+y+'" r="10" fill="none" stroke="#fff" stroke-width="2"/>'
-    +'<circle cx="'+x+'" cy="'+y+'" r="6.5" fill="#fff" stroke="#0b3c69" stroke-width="2.5"/></svg>';
+    +'<circle cx="'+x+'" cy="'+y+'" r="6.5" fill="#fff" stroke="#0b3c69" stroke-width="2.5"/>';
+  const esc=v=>String(v).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+  (m.labels||[]).forEach(l=>{ g+='<text x="'+l.x+'" y="'+l.y+'" transform="rotate('+l.a+' '+l.x+' '+l.y+')" text-anchor="middle" dominant-baseline="central" font-family="Barlow, sans-serif" font-size="9.5" font-weight="600" letter-spacing=".3" fill="#fff" stroke="#155c9c" stroke-width="3" paint-order="stroke" stroke-linejoin="round">'+esc(l.t)+'</text>'; });
+  g+='</svg>';
   g+='<span class="attr">© <a href="https://www.openstreetmap.org/copyright" target="_blank" rel="noopener">OpenStreetMap</a></span>';
   box.innerHTML=g; box.hidden=false;
 }
@@ -636,8 +731,7 @@ async function nextSensor(){
     const j=(state.idx+i)%n, s=SENSORS[j];
     const r=await getData(s);
     if(r.live||CONFIG.mode!=="static"){
-      state.idx=j; state.sensor=s; state.data=r.data; state.period=r.period;
-      document.getElementById("demo-flag").hidden=r.live;
+      state.idx=j; state.sensor=s; applyResult(r);
       break;
     }
   }
@@ -658,22 +752,22 @@ async function init(){
   document.getElementById("lang-btn").addEventListener("click",()=>setLang(LANG==="sl"?"en":"sl"));
   document.querySelectorAll(".wtab").forEach(el=>el.addEventListener("click",()=>setWindow(el.dataset.window)));
   document.getElementById("next-btn").addEventListener("click",nextSensor);
+  document.getElementById("d-apply").addEventListener("click",async()=>{ const f=document.getElementById("d-from").value, to=document.getElementById("d-to").value; if(f&&to){ state.range={from:f,to}; await refresh(); } });
 
   const idx=loadIndex();
   state.idx=idx%SENSORS.length;
   state.sensor=SENSORS[state.idx];
   state.featuredKey=CONFIG.rotateFeaturedMetric?METRICS[idx%METRICS.length].key:METRICS[0].key;
 
-  let {data,live,period}=await getData(state.sensor);
+  let res=await getData(state.sensor);
   /* staticni nacin: ce izbrani senzor nima podatkov, poisci naslednjega, ki jih ima */
-  if(CONFIG.mode==="static"&&!live){
-    for(let k=1;k<SENSORS.length&&!live;k++){
+  if(CONFIG.mode==="static"&&!res.live){
+    for(let k=1;k<SENSORS.length&&!res.live;k++){
       const s=SENSORS[(idx+k)%SENSORS.length], r=await getData(s);
-      if(r.live){ state.sensor=s; state.idx=(idx+k)%SENSORS.length; ({data,live,period}=r); }
+      if(r.live){ state.sensor=s; state.idx=(idx+k)%SENSORS.length; res=r; }
     }
   }
-  state.data=data; state.period=period;
-  document.getElementById("demo-flag").hidden=live;
+  applyResult(res);
   applyLang();
   loadMap();
   if(document.fonts&&document.fonts.ready) document.fonts.ready.then(layoutWires);
