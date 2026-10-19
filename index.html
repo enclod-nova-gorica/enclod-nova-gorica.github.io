@@ -73,7 +73,7 @@
   .dl-link:hover{background:#fff;color:var(--slate);border-color:#fff;text-decoration:none}
 
   /* DATA */
-  .data{position:relative;flex:1 1 auto;display:grid;grid-template-columns:minmax(280px,1.1fr) minmax(360px,1.4fr);align-items:center;gap:clamp(20px,4vw,70px);margin-top:0}
+  .data{position:relative;flex:0 0 auto;display:grid;grid-template-columns:minmax(280px,1.1fr) minmax(360px,1.4fr);align-items:center;gap:clamp(20px,4vw,70px);margin-top:0}
   #wires{position:absolute;inset:0;width:100%;height:100%;pointer-events:none;z-index:0}
   .data > *{position:relative;z-index:1}
 
@@ -109,6 +109,9 @@
   .featured .cmp{font-size:clamp(12px,1.1vw,15px);margin-top:8px}
   .prange{display:inline-flex;align-items:center;gap:6px;flex-wrap:wrap}
   .prange[hidden]{display:none}
+  .pcal{display:inline-flex;align-items:center;justify-content:center;background:none;border:0;padding:3px;margin:-3px;border-radius:4px;color:inherit;cursor:pointer}
+  .pcal:hover,.pcal.on{background:rgba(255,255,255,.2)}
+  .pcal .pico{opacity:1}
   .prange input{font:600 13px/1 "Barlow",sans-serif;color:var(--slate);background:#fff;border:0;border-radius:4px;padding:4px 6px}
   .prange button{font:600 12px/1 "Barlow",sans-serif;letter-spacing:.04em;text-transform:uppercase;color:#fff;background:transparent;border:1px solid rgba(255,255,255,.6);border-radius:4px;padding:5px 9px;cursor:pointer}
   .prange button:hover{background:#fff;color:var(--slate)}
@@ -156,12 +159,12 @@
   .top-row .period{grid-area:period;justify-self:start;margin-top:0}
   .top-row .actions{grid-area:actions;align-self:start}
   .top-row .brandmark{grid-area:brand;justify-self:start;align-self:start}
-  .top-row .mapbox{grid-area:map;justify-self:start;align-self:start;width:clamp(240px,28vw,420px)}
+  .top-row .mapbox{grid-area:map;justify-self:stretch;align-self:stretch;width:auto;max-width:680px;aspect-ratio:auto;min-height:250px}
   .top-row .windowtabs{grid-area:tabs;align-self:end;margin-top:0}
   .brandmark{display:flex;align-items:center;justify-content:flex-start;background:#fff;border-radius:8px;padding:clamp(6px,.8vw,10px) clamp(10px,1.2vw,16px);width:clamp(170px,17vw,250px);box-shadow:0 8px 22px rgba(0,0,0,.22)}
   .mapbox{position:relative;width:100%;aspect-ratio:400/260;border-radius:8px;overflow:hidden;background:#155c9c;border:1px solid rgba(255,255,255,.35)}
   .mapbox[hidden]{display:none}
-  .mapbox svg{display:block;width:100%;height:100%}
+  .mapbox svg{display:block;position:absolute;inset:0;width:100%;height:100%}
   .mapbox .attr{position:absolute;right:6px;bottom:4px;font-size:9px;color:rgba(255,255,255,.6)}
   .mapbox .attr a{color:inherit}
   .pulse{transform-origin:center;transform-box:fill-box;animation:pulse 2.4s ease-out infinite}
@@ -175,7 +178,7 @@
   .brandmark img{display:block;width:100%;height:auto;max-height:100%;object-fit:contain}
   @media (max-width:880px){
     .top-row{grid-template-columns:1fr;grid-template-areas:"loc" "period" "actions" "brand" "map" "tabs";grid-template-rows:none;gap:16px}
-    .top-row .mapbox{width:100%}
+    .top-row .mapbox{width:100%;max-width:none;aspect-ratio:400/260;min-height:0}
     .brandmark{width:auto;max-width:min(60vw,240px)}
   }
 </style>
@@ -216,7 +219,7 @@
   </section>
 
   <div class="period" id="period">
-    <svg class="pico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 2v3M17 2v3M3.5 8.5h17M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg>
+    <button type="button" class="pcal" id="pcal"><svg class="pico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6"><path d="M7 2v3M17 2v3M3.5 8.5h17M5 5h14a1 1 0 0 1 1 1v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V6a1 1 0 0 1 1-1z"/></svg></button>
     <span class="plabel" id="period-label">Data period</span>
     <span class="pval" id="period-val">—</span>
     <span class="prange" id="prange" hidden><input type="date" id="d-from"><span id="range-to">do</span><input type="date" id="d-to"><button type="button" id="d-apply">Prikaži</button></span>
@@ -231,11 +234,10 @@
     <div class="mapbox" id="mapbox" hidden></div>
     </div>
     <div class="windowtabs" id="windowtabs">
-      <button class="wtab" data-window="hour" type="button"></button>
-      <button class="wtab" data-window="day" type="button"></button>
-      <button class="wtab" data-window="week" type="button"></button>
       <button class="wtab" data-window="month" type="button"></button>
-      <button class="wtab" data-window="custom" type="button"></button>
+      <button class="wtab" data-window="week" type="button"></button>
+      <button class="wtab" data-window="day" type="button"></button>
+      <button class="wtab" data-window="hour" type="button"></button>
     </div>
   </div>
 
@@ -402,7 +404,7 @@ const I18N = {
   sl:{
     brand_kicker:"Projekt EnCLOD – Interreg Central Europe",
     win_hour:"Zadnja ura", win_day:"Zadnji dan", win_week:"Zadnji teden", win_month:"Zadnji mesec", win_custom:"Po izbiri",
-    range_apply:"Prikaži", range_to:"do",
+    range_apply:"Prikaži", range_to:"do", pick_range:"Izberi poljubno obdobje",
     cmp_up:"nad povprečjem", cmp_down:"pod povprečjem", cmp_eq:"v povprečju",
     cmp_hour:"Primerjava: povprečje iste ure na isti dan v tednu v zadnjih 8 tednih.",
     cmp_day:"Primerjava: povprečje istega dne v tednu v zadnjih 8 tednih.",
@@ -429,7 +431,7 @@ const I18N = {
   en:{
     brand_kicker:"EnCLOD Project – Interreg Central Europe",
     win_hour:"Last hour", win_day:"Last day", win_week:"Last week", win_month:"Last month", win_custom:"Custom",
-    range_apply:"Show", range_to:"to",
+    range_apply:"Show", range_to:"to", pick_range:"Choose a custom period",
     cmp_up:"above average", cmp_down:"below average", cmp_eq:"about average",
     cmp_hour:"Compared with the average for the same hour and weekday over the last 8 weeks.",
     cmp_day:"Compared with the average for the same weekday over the last 8 weeks.",
@@ -570,7 +572,7 @@ function dailyWindow(dl,w){
 async function getData(sensor){
   if(CONFIG.mode==="static"){
     try{
-      const w=state.window||"week";
+      const w=state.window||"month";
       if(w==="hour"){
         const r=await fetchStatic(sensor), dl=await loadDaily(sensor);
         let base=null;
@@ -597,7 +599,7 @@ async function getData(sensor){
 /* ---------- IZRIS ---------- */
 const C=2*Math.PI*44;
 const nf=new Intl.NumberFormat("en-US",{useGrouping:false});
-const state={sensor:null,featuredKey:null,data:null,window:"week"};
+const state={sensor:null,featuredKey:null,data:null,window:"month"};
 
 function shareDenom(d){ return CONFIG.shareMode==="modal"?(d.pedestrian+d.bike+d.car+d.heavy):(d.pedestrian+d.bike+d.car+d.heavy+d.night); }
 function pct(v,den){ return den>0?(v/den*100):0; }
@@ -667,6 +669,8 @@ function applyLang(){
   document.getElementById("loc-link-label").textContent=t("loc_link");
   document.getElementById("night-note").textContent=state.base?t(state.cmp||"cmp_week"):(state.window==="custom"?t("cmp_custom"):t("cmp_none"));
   document.getElementById("d-apply").textContent=t("range_apply");
+  document.getElementById("pcal").title=t("pick_range"); document.getElementById("pcal").setAttribute("aria-label",t("pick_range"));
+  document.getElementById("pcal").classList.toggle("on",state.window==="custom");
   document.getElementById("range-to").textContent=t("range_to");
   document.getElementById("prange").hidden=state.window!=="custom";
   document.getElementById("period-val").hidden=state.window==="custom";
@@ -678,7 +682,7 @@ function applyLang(){
   document.getElementById("period-val").textContent=state.period?fmtPeriod(state.period.start,state.period.end):"—";
   document.getElementById("demo-flag").textContent=t("demo");
   document.getElementById("lang-btn").textContent=t("lang_other");   // en gumb: prikaže CILJNI jezik
-  document.querySelectorAll(".wtab").forEach(el=>{ el.textContent=t("win_"+el.dataset.window); el.classList.toggle("active", el.dataset.window===(state.window||"week")); });
+  document.querySelectorAll(".wtab").forEach(el=>{ el.textContent=t("win_"+el.dataset.window); el.classList.toggle("active", el.dataset.window===(state.window||"month")); });
   render();
 }
 function setLang(l){ LANG=l; try{localStorage.setItem("ngodd_lang",l);}catch(e){} applyLang(); }
@@ -752,6 +756,7 @@ async function init(){
   document.getElementById("lang-btn").addEventListener("click",()=>setLang(LANG==="sl"?"en":"sl"));
   document.querySelectorAll(".wtab").forEach(el=>el.addEventListener("click",()=>setWindow(el.dataset.window)));
   document.getElementById("next-btn").addEventListener("click",nextSensor);
+  document.getElementById("pcal").addEventListener("click",()=>{ if(state.window==="custom") setWindow(state.prevWindow||"month"); else { state.prevWindow=state.window; setWindow("custom"); } });
   document.getElementById("d-apply").addEventListener("click",async()=>{ const f=document.getElementById("d-from").value, to=document.getElementById("d-to").value; if(f&&to){ state.range={from:f,to}; await refresh(); } });
 
   const idx=loadIndex();
