@@ -57,6 +57,8 @@
   .intro{max-width:1000px}
   .intro h1{font-weight:700;font-size:clamp(16px,1.6vw,22px);margin:0 0 8px}
   .intro p{margin:0;font-size:clamp(12px,1.05vw,15px);line-height:1.45;color:var(--ink-muted)}   /* celotno besedilo, brez drsnika */
+  .intro .usecase{margin-top:8px;color:var(--ink)}
+  .intro .usecase a{color:var(--ink);font-weight:600;text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px;overflow-wrap:anywhere}
   .intro p::-webkit-scrollbar{width:6px}
   .intro p::-webkit-scrollbar-thumb{background:rgba(255,255,255,.3);border-radius:3px}
 
@@ -203,6 +205,7 @@
   <section class="intro">
     <h1 id="intro-h"></h1>
     <p id="intro-p"></p>
+    <p class="usecase" id="usecase"></p>
   </section>
 
   <div class="top-row">
@@ -413,6 +416,7 @@ const I18N = {
     cmp_custom:"Za izbrano obdobje primerjava ni prikazana.",
     cmp_none:"Za primerjavo s povprečjem še ni dovolj starejših podatkov.",
     no_data:"Za izbrano obdobje ta senzor nima podatkov.",
+    usecase:'Nadzorna plošča je primer uporabe (use case) odprtih podatkov Mestne občine Nova Gorica. Uradni prometni portal občine: <a href="https://mapa.kingprostor.si/javno/promet/app_Zr75LMFN" target="_blank" rel="noopener">mapa.kingprostor.si&nbsp;&#8599;</a>',
     brand:"Nova Gorica – nadzorna plošča odprtih podatkov",
     nav_about:"O nas", nav_projects:"Več o projektu", nav_contacts:"Kontakt",
     intro_h:"Krepitev upravljavskih zmogljivosti lokalnih skupnosti z odprtimi podatki",
@@ -441,6 +445,7 @@ const I18N = {
     cmp_custom:"No comparison is shown for a custom period.",
     cmp_none:"Not enough earlier data yet for a comparison with the average.",
     no_data:"This sensor has no data for the selected period.",
+    usecase:'This dashboard is a use case of open data from the Municipality of Nova Gorica. Official municipal traffic portal: <a href="https://mapa.kingprostor.si/javno/promet/app_Zr75LMFN" target="_blank" rel="noopener">mapa.kingprostor.si&nbsp;&#8599;</a>',
     brand:"Nova Gorica Open Data Dashboard",
     nav_about:"About us", nav_projects:"More about the project", nav_contacts:"Contact",
     intro_h:"Enhancing governance capacities of local authorities using open data",
@@ -671,6 +676,7 @@ function applyLang(){
   document.querySelector('[data-link="contacts"]').textContent=t("nav_contacts");
   document.getElementById("intro-h").textContent=t("intro_h");
   document.getElementById("intro-p").textContent=t("intro_p");
+  document.getElementById("usecase").innerHTML=t("usecase");
   document.getElementById("loc-link-label").textContent=t("loc_link");
   document.getElementById("night-note").textContent=state.nodata?t("no_data"):state.base?t(state.cmp||"cmp_week"):(state.window==="custom"?t("cmp_custom"):t("cmp_none"));
   document.getElementById("d-apply").textContent=t("range_apply");
